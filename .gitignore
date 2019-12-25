@@ -1,0 +1,6 @@
+token.TXT
+env/*
+*.log
+settings.py
+.vscode/*
+__pycache__/
