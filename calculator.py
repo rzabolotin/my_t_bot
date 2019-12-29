@@ -1,14 +1,17 @@
-def split_expr(expr:str):
+def split_expr(expr:str, level):
     expr = expr.replace(' ', '')
-    expr = expr.replace('+', ' + ')
-    expr = expr.replace('-', ' - ')
-    expr = expr.replace('*', ' * ')
-    expr = expr.replace('/', ' / ')
+
+    if level == 1:
+        expr = expr.replace('+', ' + ')
+        expr = expr.replace('-', ' - ')
+    elif level == 2:
+        expr = expr.replace('*', ' * ')
+        expr = expr.replace('/', ' / ')
+    
     return expr.split()    
 
-
-def calculate(expr):
-
+def calculate_operation(list_op_operators):
+    
     add = lambda a,b: a+b
     sub = lambda a,b: a-b
     mul = lambda a,b: a*b
@@ -22,36 +25,35 @@ def calculate(expr):
 
     }
 
-    ops = split_expr(expr)
-
-    if not ops:
-        return None
     res = 0
     cur_op = add
-    for op in ops:
-        if op.isdigit():
-            el = float(op)
-            res = cur_op(res, el)
-        elif op in operations:
-            cur_op = operations[op]
+    for oparator in list_op_operators:
+        if oparator in operations:
+            cur_op = operations[oparator]
         else:
-            raise ValueError('Неожиданный параметр', op)
+            res = cur_op(res, float(oparator))
     return res
 
 
+def calculate(expr):
+
+    operators_level1 = split_expr(expr, level=1)
+    
+    for index,operator in enumerate(operators_level1):
+
+        if operator in '+-':
+            continue
+        else:
+            operators_level1[index] = calculate_operation(split_expr(operator, level=2))
+
+    return calculate_operation(operators_level1)
+
+
 def simple_test(expr):
-    try:
-        print(expr, '=', calculate(expr))
-    except ZeroDivisionError:
-        print(expr, ' can\'t devide by zero')
+    print(expr, '=', calculate(expr))
+    
 
 if __name__ == '__main__':
-    simple_test('1+1')
-    simple_test('1 + 1')
-    simple_test('5-4')
-    simple_test('4-5')
-    simple_test('3*2*5')
-    simple_test('2+6')
-    simple_test('5*7')
-    simple_test('5/7')
-    simple_test('5/0')
+    simple_test('2/0.5')
+    simple_test('1+1 * 2 -2/0.5 + 4+ 4 -3/2')
+    
