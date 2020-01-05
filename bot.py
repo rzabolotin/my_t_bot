@@ -27,6 +27,7 @@ def main():
 	dp.add_handler(MessageHandler(Filters.contact, get_contact))
 	dp.add_handler(MessageHandler(Filters.location, get_location))
 	dp.add_handler(MessageHandler(Filters.text, talk_to_me))
+	dp.add_handler(MessageHandler(Filters.photo, add_cat_photo))
 
 	logging.info('starting bot')
 

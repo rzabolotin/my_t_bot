@@ -1,7 +1,7 @@
 from datetime import datetime
 from glob import glob
 import locale
-import logging
+import os
 from random import choice
 
 import dateutil.parser as parser
@@ -9,7 +9,7 @@ import ephem
 
 import game_cities
 from calculator import calculate
-from utils import get_keyboard, get_user_emo, logging_input
+from utils import get_keyboard, get_user_emo, logging_input, is_cat
 
 
 def greet_user(update, context):
@@ -144,3 +144,28 @@ def lets_calculate(update, context):
 	except ValueError as e:
 		res = f'не могу распозрать {e}'
 	update.message.reply_text(f'результат = {res}')
+
+
+def add_cat_photo(update, context):
+	update.message.reply_text('Обрабатываю фото')
+	logging_input(update, 'Получили фотографию, может быть котик')
+
+	os.makedirs('downloads', exist_ok=True)
+	photo_file = context.bot.getFile(update.message.photo[-1].file_id)
+	filename = os.path.join('downloads', f'{photo_file.file_id}.jpg')
+	photo_file.download(filename)
+	update.message.reply_text('Файл сохранен')
+
+	if is_cat(filename):
+		new_filename = os.path.join('cats', f'cat_{photo_file.file_id}.jpg')
+		os.rename(filename, new_filename)
+		update.message.reply_text('Обнаружен котик. Забираем его к себе.')
+		logging_input(update, f'Добавили котика в базу фоточек. {new_filename}')
+	else:
+		os.remove(filename)
+		update.message.reply_text('Что вы прислали ?! Тут нет котиков!')
+
+
+		
+
+

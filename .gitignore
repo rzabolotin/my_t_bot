@@ -5,3 +5,4 @@ settings.py
 .vscode/*
 __pycache__/
 venv/
+downloads
