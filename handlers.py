@@ -6,6 +6,8 @@ from random import choice
 
 import dateutil.parser as parser
 import ephem
+from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode
+from telegram.ext import ConversationHandler
 
 import game_cities
 from calculator import calculate
@@ -145,7 +147,6 @@ def lets_calculate(update, context):
 		res = f'не могу распозрать {e}'
 	update.message.reply_text(f'результат = {res}')
 
-
 def add_cat_photo(update, context):
 	update.message.reply_text('Обрабатываю фото')
 	logging_input(update, 'Получили фотографию, может быть котик')
@@ -165,7 +166,52 @@ def add_cat_photo(update, context):
 		os.remove(filename)
 		update.message.reply_text('Что вы прислали ?! Тут нет котиков!')
 
+def anketa_start(update, context):
+	update.message.reply_text('Как вас зовут? Напишите имя и фамилию.', reply_markup=ReplyKeyboardRemove())
+	return 'anketa_name'
 
-		
+def anketa_name(update, context):
+	
+	answer = update.message.text
+	if len(answer.split()) != 2:
+		update.message.reply_text('Укажите Имя и Фамилию (2 слова)')
+		return 'anketa_name'
+	
+	context.user_data['anketa_name'] = answer
+
+	my_keyboard = ReplyKeyboardMarkup([['1','2','3','4','5']], one_time_keyboard=True)
+
+	update.message.reply_text('Оцените качество работы сервиса', reply_markup=my_keyboard)
+	return 'anketa_rating'
+
+def anketa_rating(update, context):
+	
+	context.user_data['anketa_rating'] = update.message.text
+
+	update.message.reply_text("""Напишите краткий отзыв о работе сервиса
+или /skip для пропуска шага""")
+	return 'anketa_comment'
+
+def anketa_comment(update, context):
+	context.user_data['anketa_comment'] = update.message.text
+
+	anketa_text = """
+<b>Имя</b>: {anketa_name}
+<b>Оценка</b>: {anketa_rating}
+<b>Комментарий</b>: {anketa_comment}
+	""".format(**context.user_data)
+	update.message.reply_text(anketa_text, parse_mode = ParseMode.HTML, reply_markup=get_keyboard())
+	return ConversationHandler.END
+
+def anketa_skip_comment(update, context):
+
+	anketa_text = """
+<b>Имя</b>: {anketa_name}
+<b>Оценка</b>: {anketa_rating}
+	""".format(**context.user_data)
+	update.message.reply_text(anketa_text, parse_mode = ParseMode.HTML, reply_markup=get_keyboard())
+	return ConversationHandler.END
 
 
+def anketa_dont_understand(update, context):
+	update.message.reply_text('Не понял Вас')

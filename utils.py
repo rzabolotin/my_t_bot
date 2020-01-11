@@ -14,6 +14,7 @@ def get_keyboard():
 
 	my_keyboard = ReplyKeyboardMarkup([
 										['Прислать котика', 'Сменить аватарку'],
+										['Заполнить анкету'],
 										[contactButton, coordinateButton]
 									  ], 
 									  resize_keyboard=True)
