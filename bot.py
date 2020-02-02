@@ -5,11 +5,13 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Regex
 from handlers import * 
 import settings
 
-
+spam_subscribers = set()
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
 			level = logging.INFO,
 			filename='my_bot.log')
+
+
 
 def main():
 	mybot = Updater(settings.TOKEN, request_kwargs=settings.PROXY, use_context=True)
@@ -24,9 +26,14 @@ def main():
 		fallbacks=[MessageHandler(Filters.text|Filters.photo|Filters.video, anketa_dont_understand)]
 	)
 
+	mybot.job_queue.run_repeating(send_spam, interval=5)
+
 	dp = mybot.dispatcher
 	dp.add_handler(CommandHandler('start', greet_user))
 	dp.add_handler(anketa)
+	dp.add_handler(CommandHandler('subscribe', spam_subscribe))
+	dp.add_handler(CommandHandler('unsubscribe', spam_unsubscribe))
+	dp.add_handler(CommandHandler('alarm', set_alarm))
 	dp.add_handler(CommandHandler('planet', print_planet_constellation))
 	dp.add_handler(CommandHandler('word_count', word_count))
 	dp.add_handler(CommandHandler('next_full_moon', next_full_moon))

@@ -9,8 +9,9 @@ import ephem
 from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import ConversationHandler
 
-import game_cities
+from bot import spam_subscribers
 from calculator import calculate
+import game_cities
 from utils import get_keyboard, get_user_emo, logging_input, is_cat
 
 
@@ -20,6 +21,8 @@ def greet_user(update, context):
 	
 	text = f'Привет {get_user_emo(context.user_data)}'
 	update.message.reply_text(text, reply_markup=get_keyboard())
+
+	print(update.message.chat_id)
 
 def talk_to_me(update, context):
 	
@@ -212,6 +215,55 @@ def anketa_skip_comment(update, context):
 	update.message.reply_text(anketa_text, parse_mode = ParseMode.HTML, reply_markup=get_keyboard())
 	return ConversationHandler.END
 
-
 def anketa_dont_understand(update, context):
 	update.message.reply_text('Не понял Вас')
+
+def send_spam(context):
+	spam_message = 'Lovely Spam! Wonderful Spam!!'
+	for chat_id in spam_subscribers:
+		context.bot.sendMessage(chat_id=chat_id, text = spam_message)
+
+def spam_subscribe(update, context):
+	
+	logging_input(update)
+	
+	chat_id = update.message.chat_id
+	if chat_id in spam_subscribers:
+		message = get_user_emo(context.user_data) + ', ты уже подписан'
+	else:
+		spam_subscribers.add(chat_id)
+		message = f'{get_user_emo(context.user_data)}, ты подписался на спам ;)'
+	update.message.reply_text(message, reply_markup=get_keyboard())
+
+	
+
+def spam_unsubscribe(update, context):
+	
+	logging_input(update)
+	
+	chat_id = update.message.chat_id
+	if chat_id not in spam_subscribers:
+		message = get_user_emo(context.user_data) + ', ты и так не подписан'
+	else:
+		spam_subscribers.remove(chat_id)
+		message = f'{get_user_emo(context.user_data)}, мы тебя убрали из списка'
+	
+	update.message.reply_text(message, reply_markup=get_keyboard())
+
+def set_alarm(update, context):
+
+	logging_input(update)
+
+	alarm_args = update.message.text.split()
+	try:
+		interval = int(alarm_args[1])
+	except (ValueError, IndexError):
+		update.message.reply_text('Не понятно, когда запустить будильник', reply_markup=get_keyboard())
+		return
+	
+	context.job_queue.run_once(alarm, interval, context=update.message.chat_id)
+
+	update.message.reply_text(message, reply_markup=get_keyboard())
+
+def alarm(context):
+	context.bot.sendMessage(chat_id=context.job.context, text = '!!!!Вам напоминание!!!!')
