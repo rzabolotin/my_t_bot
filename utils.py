@@ -5,6 +5,7 @@ from clarifai.rest import ClarifaiApp
 from emoji import emojize
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 
+from db import update_user_emo
 import settings
 
 def get_keyboard():
@@ -25,12 +26,11 @@ def get_keyboard():
 
 
 def get_user_emo(user_data):
-	if 'emo' in user_data:
-		return user_data['emo']
-	else:
-		user_data['emo'] = emojize(choice(settings.USER_EMOJI), use_aliases=True)
-		return user_data['emo']
-
+	if 'emo' not in user_data:
+		user_data['emo'] = choice(settings.USER_EMOJI)
+		update_user_emo(user_data)		
+		
+	return emojize(user_data['emo'], use_aliases=True)
 
 def logging_input(update, info = None):
 	logging.info(f'get message from {update.message.from_user.username}, message={update.message.text}')

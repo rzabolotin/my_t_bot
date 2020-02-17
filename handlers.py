@@ -6,11 +6,11 @@ from random import choice
 
 import dateutil.parser as parser
 import ephem
-from telegram import ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode
+from telegram import error, ReplyKeyboardRemove, ReplyKeyboardMarkup, ParseMode
 from telegram.ext import ConversationHandler
 
-from bot import spam_subscribers
 from calculator import calculate
+from db import get_or_create_user, toggle_user_subscribe, get_subscribed_users
 import game_cities
 from utils import get_keyboard, get_user_emo, logging_input, is_cat
 
@@ -19,21 +19,23 @@ def greet_user(update, context):
 	
 	logging_input(update)
 	
-	text = f'Привет {get_user_emo(context.user_data)}'
-	update.message.reply_text(text, reply_markup=get_keyboard())
+	user = get_or_create_user(update.effective_user)
 
-	print(update.message.chat_id)
+	text = f'Привет {get_user_emo(user)}'
+	update.message.reply_text(text, reply_markup=get_keyboard())
 
 def talk_to_me(update, context):
 	
 	logging_input(update)
-	
+
+	user = get_or_create_user(update.effective_user)
+
 	if 'cities_game' in context.user_data:
 		game_cities.cities_user_turn(update, context)
 	else:
 
 		message = 'Привет {} {}! Ты написал: {}'.format(update.message.from_user.username, 
-														get_user_emo(context.user_data), 
+														get_user_emo(user), 
 														update.message.text)
 		update.message.reply_text(message, reply_markup=get_keyboard())
 	
@@ -111,31 +113,40 @@ def give_kitty(update, context):
 	
 def change_avatar(update, context):
 	logging_input(update)
-	if 'emo' in context.user_data:
-		del context.user_data['emo']
-	text = f'Вот твой новый аватар {get_user_emo(context.user_data)}'
+	
+	user = get_or_create_user(update.effective_user)
+
+	if 'emo' in user:
+		del user['emo']
+	text = f'Вот твой новый аватар {get_user_emo(user)}'
 	update.message.reply_text(text)
 	
 def get_contact(update, context):
+	user = get_or_create_user(update.effective_user)
 	print(update.message.contact)	
-	text = f'Готово {get_user_emo(context.user_data)}'
+	text = f'Готово {get_user_emo(user)}'
 	update.message.reply_text(text, reply_markup=get_keyboard())
 
 def get_location(update, context):
+
+	user = get_or_create_user(update.effective_user)
+
 	print(update.message.location)	
-	text = f'Готово {get_user_emo(context.user_data)}'
+	text = f'Готово {get_user_emo(user)}'
 	update.message.reply_text(text, reply_markup=get_keyboard())
 
 def start_cities_game(update, context):
 	
 	logging_input(update)
+	user = get_or_create_user(update.effective_user)
+
 
 	context.user_data['cities_game'] = game_cities.get_cities_for_game()
 	context.user_data['cities_start_letter'] = ''
 	
 	logging.info("Начинаем играть в города")
 
-	update.message.reply_text(f'Начинаем играть в города {get_user_emo(context.user_data)}')
+	update.message.reply_text(f'Начинаем играть в города {get_user_emo(user)}')
 
 	game_cities.cities_bot_turn(update, context)
 
@@ -220,33 +231,37 @@ def anketa_dont_understand(update, context):
 
 def send_spam(context):
 	spam_message = 'Lovely Spam! Wonderful Spam!!'
-	for chat_id in spam_subscribers:
-		context.bot.sendMessage(chat_id=chat_id, text = spam_message)
+	for user in get_subscribed_users():
+		try:
+			context.bot.sendMessage(chat_id=user['user_id'], text = spam_message)
+		except (error.BadRequest):
+			print('Can\'t find chat {}'.format(user['user_id']))
+
 
 def spam_subscribe(update, context):
 	
 	logging_input(update)
-	
-	chat_id = update.message.chat_id
-	if chat_id in spam_subscribers:
-		message = get_user_emo(context.user_data) + ', ты уже подписан'
-	else:
-		spam_subscribers.add(chat_id)
-		message = f'{get_user_emo(context.user_data)}, ты подписался на спам ;)'
-	update.message.reply_text(message, reply_markup=get_keyboard())
+	user = get_or_create_user(update.effective_user)
 
-	
+	if user.get('subscribed', False):
+		message = get_user_emo(user) + ', ты уже подписан'
+	else:
+		toggle_user_subscribe(user)
+		message = f'{get_user_emo(user)}, ты подписался на спам ;)'
+
+	update.message.reply_text(message, reply_markup=get_keyboard())
 
 def spam_unsubscribe(update, context):
 	
 	logging_input(update)
+	user = get_or_create_user(update.effective_user)
+
 	
-	chat_id = update.message.chat_id
-	if chat_id not in spam_subscribers:
-		message = get_user_emo(context.user_data) + ', ты и так не подписан'
+	if not user.get('subscribed', False):
+		message = get_user_emo(user) + ', ты и так не подписан'
 	else:
-		spam_subscribers.remove(chat_id)
-		message = f'{get_user_emo(context.user_data)}, мы тебя убрали из списка'
+		toggle_user_subscribe(user)
+		message = f'{get_user_emo(user)}, мы тебя убрали из списка'
 	
 	update.message.reply_text(message, reply_markup=get_keyboard())
 
@@ -263,7 +278,7 @@ def set_alarm(update, context):
 	
 	context.job_queue.run_once(alarm, interval, context=update.message.chat_id)
 
-	update.message.reply_text(message, reply_markup=get_keyboard())
+	update.message.reply_text('Будильник установлен!KP', reply_markup=get_keyboard())
 
 def alarm(context):
 	context.bot.sendMessage(chat_id=context.job.context, text = '!!!!Вам напоминание!!!!')
